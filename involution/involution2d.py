@@ -94,17 +94,17 @@ class Involution2d(nn.Module):
         self.span_mapping_bias: bool = span_mapping_bias
         self.reduce_ratio: int = reduce_ratio
 
-        self.sigma_mapping = sigma_mapping if isinstance(sigma_mapping, nn.Module) else nn.Sequential(
-            nn.BatchNorm2d(num_features=self.out_channels //
-                           self.reduce_ratio, momentum=0.3),
-            nn.ReLU()
-        )
         self.initial_mapping = nn.Conv2d(in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=1, bias=initial_mapping_bias) \
             if self.in_channels != self.out_channels else nn.Identity()
         self.o_mapping = nn.AvgPool2d(
             kernel_size=self.stride) if self.stride[0] > 1 or self.stride[1] > 1 else nn.Identity()
         self.reduce_mapping = nn.Conv2d(
             in_channels=self.in_channels, out_channels=self.out_channels // self.reduce_ratio, kernel_size=1, bias=reduce_mapping_bias)
+        self.sigma_mapping = sigma_mapping if isinstance(sigma_mapping, nn.Module) else nn.Sequential(
+            nn.BatchNorm2d(num_features=self.out_channels //
+                           self.reduce_ratio, momentum=0.3),
+            nn.ReLU()
+        )
         self.span_mapping = nn.Conv2d(in_channels=self.out_channels // self.reduce_ratio,
                                       out_channels=self.kernel_size[0] * self.kernel_size[1] * self.groups, kernel_size=1, bias=span_mapping_bias)
 
