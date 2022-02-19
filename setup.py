@@ -56,7 +56,7 @@ else:
 
 setup(
     name='involution-pytorch',
-    version="0.2.0",
+    version="0.2.1",
     url="https://github.com/shikishima-TasakiLab/Involution-PyTorch",
     license="MIT License",
     author="Junya Shikishima",
