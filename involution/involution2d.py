@@ -35,7 +35,9 @@ class Involution2d(nn.Module):
                  padding: Union[int, Tuple[int, int]] = 3,
                  dilation: Union[int, Tuple[int, int]] = 1,
                  groups: int = 1,
-                 bias: bool = False,
+                 initial_mapping_bias: bool = False,
+                 reduce_mapping_bias: bool = False,
+                 span_mapping_bias: bool = True,
                  sigma_mapping: Optional[nn.Module] = None,
                  reduce_ratio: int = 1,
                  ) -> None:
@@ -48,7 +50,9 @@ class Involution2d(nn.Module):
             padding (Union[int, Tuple[int, int]], optional): Padding to be used in unfold operation. Defaults to 3.
             dilation (Union[int, Tuple[int, int]], optional): Dilation in unfold to be employed. Defaults to 1.
             groups (int, optional): Number of groups to be employed. Defaults to 1.
-            bias (bool, optional): If true bias is utilized in each convolution layer. Defaults to False.
+            initial_mapping_bias (bool, optional): If true bias is utilized in initial_mapping convolution layer. Defaults to False.
+            reduce_mapping_bias (bool, optional): If true bias is utilized in reduce_mapping convolution layer. Defaults to False.
+            span_mapping_bias (bool, optional): If true bias is utilized in span_mapping convolution layer. Defaults to True.
             sigma_mapping (Optional[nn.Module], optional): Non-linear mapping as introduced in the paper. If none BN + ReLU is utilized
             reduce_ratio (int, optional): Reduce ration of involution channels. Defaults to 1.
         """
@@ -70,7 +74,9 @@ class Involution2d(nn.Module):
             '"groups" must be a positive integer.'
         assert in_channels % groups == 0, '"in_channels" must be divisible by "groups".'
         assert out_channels % groups == 0, '"out_channels" must be divisible by "groups".'
-        assert isinstance(bias, bool), '"bias" must be a bool.'
+        assert isinstance(initial_mapping_bias, bool), '"initial_mapping_bias" must be a bool.'
+        assert isinstance(reduce_mapping_bias, bool), '"reduce_mapping_bias" must be a bool.'
+        assert isinstance(span_mapping_bias, bool), '"span_mapping_bias" must be a bool.'
         assert isinstance(sigma_mapping, nn.Module) or sigma_mapping is None, \
             '"sigma_mapping" muse be an int or a tuple of ints.'
         assert isinstance(reduce_ratio, int) and reduce_ratio > 0, \
@@ -83,7 +89,9 @@ class Involution2d(nn.Module):
         self.padding: Tuple[int, int] = _pair(padding)
         self.dilation: Tuple[int, int] = _pair(dilation)
         self.groups: int = groups
-        self.bias: bool = bias
+        self.initial_mapping_bias: bool = initial_mapping_bias
+        self.reduce_mapping_bias: bool = reduce_mapping_bias
+        self.span_mapping_bias: bool = span_mapping_bias
         self.reduce_ratio: int = reduce_ratio
 
         self.sigma_mapping = sigma_mapping if isinstance(sigma_mapping, nn.Module) else nn.Sequential(
@@ -91,14 +99,14 @@ class Involution2d(nn.Module):
                            self.reduce_ratio, momentum=0.3),
             nn.ReLU()
         )
-        self.initial_mapping = nn.Conv2d(in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=1, bias=bias) \
+        self.initial_mapping = nn.Conv2d(in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=1, bias=initial_mapping_bias) \
             if self.in_channels != self.out_channels else nn.Identity()
         self.o_mapping = nn.AvgPool2d(
             kernel_size=self.stride) if self.stride[0] > 1 or self.stride[1] > 1 else nn.Identity()
         self.reduce_mapping = nn.Conv2d(
-            in_channels=self.in_channels, out_channels=self.out_channels // self.reduce_ratio, kernel_size=1, bias=bias)
+            in_channels=self.in_channels, out_channels=self.out_channels // self.reduce_ratio, kernel_size=1, bias=reduce_mapping_bias)
         self.span_mapping = nn.Conv2d(in_channels=self.out_channels // self.reduce_ratio,
-                                      out_channels=self.kernel_size[0] * self.kernel_size[1] * self.groups, kernel_size=1, bias=bias)
+                                      out_channels=self.kernel_size[0] * self.kernel_size[1] * self.groups, kernel_size=1, bias=span_mapping_bias)
 
     def __repr__(self) -> str:
         """Method returns information about the module
@@ -107,7 +115,8 @@ class Involution2d(nn.Module):
         """
         return (f'{self.__class__.__name__}({self.in_channels}, {self.out_channels}, kernel_size=({self.kernel_size[0]}, {self.kernel_size[1]}), '
             f'stride=({self.stride[0]}, {self.stride[1]}), padding=({self.padding[0]}, {self.padding[1]}), dilation=({self.dilation[0], self.dilation[1]}), '
-            f'groups={self.groups}, bias={self.bias}, reduce_ratio={self.reduce_ratio}, sigma_mapping={str(self.sigma_mapping)}'
+            f'groups={self.groups}, initial_mapping_bias={self.initial_mapping_bias}, reduce_mapping_bias={self.reduce_mapping_bias}, '
+            f'span_mapping_bias={self.span_mapping_bias}, reduce_ratio={self.reduce_ratio}, sigma_mapping={str(self.sigma_mapping)}'
         )
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
