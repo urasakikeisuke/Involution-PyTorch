@@ -34,7 +34,7 @@ at::Tensor involution2d_autocast(
     const std::vector<int64_t>& dilation
 ) {
     c10::impl::ExcludeDispatchKeyGuard no_autocast(c10::DispatchKey::Autocast);
-    auto exec_type = at::autocast::promote_type(at::kFloat, input, weight);
+    auto exec_type = at::autocast::promote_type(at::kFloat, at::DeviceType::CPU, input, weight);
     return involution2d(at::autocast::cached_cast(exec_type, input), at::autocast::cached_cast(exec_type, weight), stride, padding, dilation)
         .to(input.scalar_type());
 }
@@ -219,7 +219,7 @@ at::Tensor involution2d_autocast(
     const int64_t groups
 ) {
     c10::impl::ExcludeDispatchKeyGuard no_autocast(c10::DispatchKey::Autocast);
-    auto exec_type = at::autocast::promote_type(at::kFloat, input, weight);
+    auto exec_type = at::autocast::promote_type(at::kFloat, at::DeviceType::CUDA, input, weight);
     return involution2d_autograd(
         at::autocast::cached_cast(exec_type, input),
         at::autocast::cached_cast(exec_type, weight),
