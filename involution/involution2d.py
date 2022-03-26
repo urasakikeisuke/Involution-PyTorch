@@ -40,6 +40,7 @@ class Involution2d(nn.Module):
                  span_mapping_bias: bool = True,
                  sigma_mapping: Optional[nn.Module] = None,
                  reduce_ratio: int = 1,
+                 momentum: float = 0.3,
                  ) -> None:
         """2D Involution: https://arxiv.org/pdf/2103.06255.pdf
         Args:
@@ -102,7 +103,7 @@ class Involution2d(nn.Module):
             in_channels=self.in_channels, out_channels=self.out_channels // self.reduce_ratio, kernel_size=1, bias=reduce_mapping_bias)
         self.sigma_mapping = sigma_mapping if isinstance(sigma_mapping, nn.Module) else nn.Sequential(
             nn.BatchNorm2d(num_features=self.out_channels //
-                           self.reduce_ratio, momentum=0.3),
+                           self.reduce_ratio, momentum=momentum),
             nn.ReLU()
         )
         self.span_mapping = nn.Conv2d(in_channels=self.out_channels // self.reduce_ratio,
